@@ -1,0 +1,49 @@
+import pandas as pd
+import yfinance as yf
+import matplotlib.pyplot as plt
+
+# Function to fetch historical data
+def get_historical_data(symbol, start_date, end_date):
+    data = yf.download(symbol, start=start_date, end=end_date)
+    return data
+
+# Function to implement the monthly rebalance strategy
+def monthly_rebalance_strategy(data):
+    # Calculate the price 12 months ago
+    data['PriceTwelveMonthsAgo'] = data['Close'].shift(12)
+
+    # Determine if it's the first day of the month
+    data['IsFirstDayOfMonth'] = data.index.day == 1
+
+    # Buy/Sell logic
+    data['Signal'] = 'Hold'
+    data.loc[data['IsFirstDayOfMonth'] & (data['Close'] > data['PriceTwelveMonthsAgo']), 'Signal'] = 'Buy'
+    data.loc[data['IsFirstDayOfMonth'] & (data['Close'] < data['PriceTwelveMonthsAgo']), 'Signal'] = 'Sell'
+
+    return data
+
+# Main function to run the strategy
+def run_strategy(symbol, start_date, end_date):
+    # Fetch historical data
+    data = get_historical_data(symbol, start_date, end_date)
+
+    # Run the strategy
+    data = monthly_rebalance_strategy(data)
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    plt.plot(data['Close'], label=symbol, alpha=0.7)
+    plt.scatter(data.index[data['Signal'] == 'Buy'], data['Close'][data['Signal'] == 'Buy'], marker='^', color='g', label='Buy Signal')
+    plt.scatter(data.index[data['Signal'] == 'Sell'], data['Close'][data['Signal'] == 'Sell'], marker='v', color='r', label='Sell Signal')
+    plt.title('Monthly Rebalance Strategy')
+    plt.xlabel('Date')
+    plt.ylabel('Close Price')
+    plt.legend()
+    plt.show()
+
+# Example usage
+symbol = 'AAPL'
+start_date = '2022-01-01'
+end_date = '2023-01-01'
+
+run_strategy(symbol, start_date, end_date)
